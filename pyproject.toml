@@ -47,6 +47,7 @@ pyodbc = { version = "~4.0.32", optional = true }
 
 [tool.poetry.extras]
 sqlserver = ["pyodbc"]
+oracle = ["cx_Oracle"]
 
 [tool.poetry.dev-dependencies]
 wheel = "^0.36.2"
