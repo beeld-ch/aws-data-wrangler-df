@@ -2,9 +2,9 @@ import logging
 from decimal import Decimal
 
 import boto3
-import cx_Oracle
 import pandas as pd
 import pyarrow as pa
+import cx_Oracle
 import pytest
 
 import awswrangler as wr
@@ -13,45 +13,15 @@ from ._utils import ensure_data_types, get_df
 
 logging.getLogger("awswrangler").setLevel(logging.DEBUG)
 
-
-@pytest.fixture(scope="module", autouse=True)
-def create_oracle_database(databases_parameters):
-
-    connection_dsn = cx_Oracle.makedsn(
-        databases_parameters["oracle"]["host"],
-        databases_parameters["oracle"]["port"],
-        service_name=databases_parameters["oracle"]["database"],
-    )
-    con = cx_Oracle.connect(
-        user=databases_parameters["oracle"]["user"],
-        password=databases_parameters["oracle"]["password"],
-        dsn=connection_dsn,
-    )
-    con.autocommit = True
-
-    sql_create_db = (
-        f"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '{databases_parameters['oracle']['database']}') "
-        "BEGIN "
-        f"CREATE DATABASE {databases_parameters['oracle']['database']} "
-        "END"
-    )
-    with con.cursor() as cursor:
-        cursor.execute(sql_create_db)
-        con.commit()
-    con.close()
-
-    yield
-
-
 @pytest.fixture(scope="function")
 def oracle_con():
-    con = wr.oracle.connect("cfait-oracle")
+    con = wr.oracle.connect("aws-data-wrangler-oracle")
     yield con
     con.close()
 
 
 def test_connection():
-    wr.oracle.connect("cfait-oracle", timeout=10).close()
+    wr.oracle.connect("aws-data-wrangler-oracle", call_timeout=10000).close()
 
 
 def test_read_sql_query_simple(databases_parameters, oracle_con):
@@ -61,7 +31,7 @@ def test_read_sql_query_simple(databases_parameters, oracle_con):
 
 def test_to_sql_simple(oracle_table, oracle_con):
     df = pd.DataFrame({"c0": [1, 2, 3], "c1": ["foo", "boo", "bar"]})
-    wr.oracle.to_sql(df, oracle_con, oracle_table, "ADMIN", "overwrite", True)
+    wr.oracle.to_sql(df, oracle_con, oracle_table, "TEST", "overwrite", True)
 
 
 def test_sql_types(oracle_table, oracle_con):
@@ -72,15 +42,15 @@ def test_sql_types(oracle_table, oracle_con):
         df=df,
         con=oracle_con,
         table=table,
-        schema="ADMIN",
+        schema="TEST",
         mode="overwrite",
         index=True,
         dtype={"iint32": "INTEGER"},
     )
-    df = wr.oracle.read_sql_query(f"SELECT * FROM ADMIN.{table}", oracle_con)
+    df = wr.oracle.read_sql_query(f'SELECT * FROM "TEST"."{table}"', oracle_con)
     ensure_data_types(df, has_list=False)
     dfs = wr.oracle.read_sql_query(
-        sql=f"SELECT * FROM ADMIN.{table}",
+        sql=f'SELECT * FROM "TEST"."{table}"',
         con=oracle_con,
         chunksize=1,
         dtype={
@@ -119,12 +89,12 @@ def test_to_sql_cast(oracle_table, oracle_con):
         df=df,
         con=oracle_con,
         table=table,
-        schema="ADMIN",
+        schema="TEST",
         mode="overwrite",
         index=False,
         dtype={"col": "VARCHAR(1024)"},
     )
-    df2 = wr.oracle.read_sql_query(sql=f"SELECT * FROM ADMIN.{table}", con=oracle_con)
+    df2 = wr.oracle.read_sql_query(sql=f'SELECT * FROM "TEST"."{table}"', con=oracle_con)
     assert df.equals(df2)
 
 
@@ -135,7 +105,7 @@ def test_null(oracle_table, oracle_con):
         df=df,
         con=oracle_con,
         table=table,
-        schema="ADMIN",
+        schema="TEST",
         mode="overwrite",
         index=False,
         dtype={"nothing": "INTEGER"},
@@ -144,11 +114,12 @@ def test_null(oracle_table, oracle_con):
         df=df,
         con=oracle_con,
         table=table,
-        schema="ADMIN",
+        schema="TEST",
         mode="append",
         index=False,
     )
-    df2 = wr.oracle.read_sql_table(table=table, schema="ADMIN", con=oracle_con)
+
+    df2 = wr.oracle.read_sql_table(table=table, schema="TEST", con=oracle_con)
     df["id"] = df["id"].astype("Int64")
     assert pd.concat(objs=[df, df], ignore_index=True).equals(df2)
 
@@ -162,9 +133,9 @@ def test_decimal_cast(oracle_table, oracle_con):
             "col2": [Decimal((0, (1, 9, 9), -2)), None, Decimal((0, (1, 9, 0), -2))],
         }
     )
-    wr.oracle.to_sql(df, oracle_con, table, "ADMIN")
+    wr.oracle.to_sql(df, oracle_con, table, "TEST")
     df2 = wr.oracle.read_sql_table(
-        schema="ADMIN", table=table, con=oracle_con, dtype={"col0": "float32", "col1": "float64", "col2": "Int64"}
+        schema="TEST", table=table, con=oracle_con, dtype={"col0": "float32", "col1": "float64", "col2": "Int64"}
     )
     assert df2.dtypes.to_list() == ["float32", "float64", "Int64"]
     assert 3.88 <= df2.col0.sum() <= 3.89
@@ -183,15 +154,15 @@ def test_read_retry(oracle_con):
 
 def test_table_name(oracle_con):
     df = pd.DataFrame({"col0": [1]})
-    wr.oracle.to_sql(df, oracle_con, "Test Name", "ADMIN", mode="overwrite")
-    df = wr.oracle.read_sql_table(schema="ADMIN", con=oracle_con, table="Test Name")
+    wr.oracle.to_sql(df, oracle_con, "Test Name", "TEST", mode="overwrite")
+    df = wr.oracle.read_sql_table(schema="TEST", con=oracle_con, table="Test Name")
     assert df.shape == (1, 1)
     with oracle_con.cursor() as cursor:
         cursor.execute('DROP TABLE "Test Name"')
     oracle_con.commit()
 
 
-@pytest.mark.parametrize("dbname", [None, "test"])
+@pytest.mark.parametrize("dbname", [None, "ORCL"])
 def test_connect_secret_manager(dbname):
     try:
         con = wr.oracle.connect(secret_id="aws-data-wrangler/oracle", dbname=dbname)
@@ -203,7 +174,7 @@ def test_connect_secret_manager(dbname):
 
 def test_insert_with_column_names(oracle_table, oracle_con):
     create_table_sql = (
-        f"CREATE TABLE ADMIN.{oracle_table} " "(c0 varchar(100) NULL," "c1 INT DEFAULT 42 NULL," "c2 INT NOT NULL);"
+        f'CREATE TABLE "TEST"."{oracle_table}" ' '("c0" varchar2(100) NULL,' '"c1" NUMBER(10) DEFAULT 42 NULL,' '"c2" NUMBER(10) NOT NULL)'
     )
     with oracle_con.cursor() as cursor:
         cursor.execute(create_table_sql)
@@ -211,14 +182,16 @@ def test_insert_with_column_names(oracle_table, oracle_con):
 
     df = pd.DataFrame({"c0": ["foo", "bar"], "c2": [1, 2]})
 
-    with pytest.raises(pyodbc.Error):
+    with pytest.raises(cx_Oracle.Error):
         wr.oracle.to_sql(
-            df=df, con=oracle_con, schema="ADMIN", table=oracle_table, mode="append", use_column_names=False
+            df=df, con=oracle_con, schema="TEST", table=oracle_table, mode="append", use_column_names=False
         )
 
-    wr.oracle.to_sql(df=df, con=oracle_con, schema="ADMIN", table=oracle_table, mode="append", use_column_names=True)
+    wr.oracle.to_sql(
+        df=df, con=oracle_con, schema="TEST", table=oracle_table, mode="append", use_column_names=True
+    )
 
-    df2 = wr.oracle.read_sql_table(con=oracle_con, schema="ADMIN", table=oracle_table)
+    df2 = wr.oracle.read_sql_table(con=oracle_con, schema="TEST", table=oracle_table)
 
     df["c1"] = 42
     df["c0"] = df["c0"].astype("string")
@@ -227,14 +200,11 @@ def test_insert_with_column_names(oracle_table, oracle_con):
     df = df.reindex(sorted(df.columns), axis=1)
     assert df.equals(df2)
 
-
 @pytest.mark.parametrize("chunksize", [1, 10, 500])
 def test_dfs_are_equal_for_different_chunksizes(oracle_table, oracle_con, chunksize):
     df = pd.DataFrame({"c0": [i for i in range(64)], "c1": ["foo" for _ in range(64)]})
-    wr.oracle.to_sql(df=df, con=oracle_con, schema="ADMIN", table=oracle_table, chunksize=chunksize)
-
-    df2 = wr.oracle.read_sql_table(con=oracle_con, schema="ADMIN", table=oracle_table)
-
+    wr.oracle.to_sql(df=df, con=oracle_con, schema="TEST", table=oracle_table, chunksize=chunksize)
+    df2 = wr.oracle.read_sql_table(con=oracle_con, schema="TEST", table=oracle_table)
     df["c0"] = df["c0"].astype("Int64")
     df["c1"] = df["c1"].astype("string")
 

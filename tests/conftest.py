@@ -156,9 +156,9 @@ def databases_parameters(cloudformation_outputs, db_password):
     parameters["mysql_serverless"]["database"] = "test"
     parameters["mysql_serverless"]["arn"] = cloudformation_outputs["MysqlServerlessClusterArn"]
     parameters["oracle"]["host"] = cloudformation_outputs["OracleAddress"]
-    parameters["oracle"]["port"] = 1433
-    parameters["oracle"]["schema"] = "dbo"
-    parameters["oracle"]["database"] = "test"
+    parameters["oracle"]["port"] = 1521
+    parameters["oracle"]["schema"] = "ADMIN"
+    parameters["oracle"]["database"] = "ORCL"
     return parameters
 
 

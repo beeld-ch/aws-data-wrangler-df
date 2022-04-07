@@ -69,10 +69,9 @@ END;
     _logger.debug("Drop table query:\n%s", sql)
     cursor.execute(sql)
 
-
 def _does_table_exist(cursor: "cx_Oracle.Cursor", schema: Optional[str], table: str) -> bool:
-    schema_str = f"TABLE_SCHEMA = '{schema}' AND" if schema else ""
-    cursor.execute(f"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE " f"{schema_str} TABLE_NAME = '{table}'")
+    schema_str = f"OWNER = '{schema}' AND" if schema else ""
+    cursor.execute(f"SELECT * FROM ALL_TABLES WHERE {schema_str} TABLE_NAME = '{table}'")
     return len(cursor.fetchall()) > 0
 
 
@@ -98,9 +97,11 @@ def _create_table(
         varchar_lengths=varchar_lengths,
         converter_func=_data_types.pyarrow2oracle,
     )
-    cols_str: str = "".join([f"{k} {v},\n" for k, v in oracle_types.items()])[:-2]
+    cols_str: str = "".join([f"\"{k}\" {v},\n" for k, v in oracle_types.items()])[:-2]
     table_identifier = _get_table_identifier(schema, table)
-    sql = f"CREATE TABLE {table_identifier} (\n{cols_str})"
+    sql = (
+        f"CREATE TABLE {table_identifier} (\n{cols_str})"
+    )
     _logger.debug("Create table query:\n%s", sql)
     cursor.execute(sql)
 
@@ -112,6 +113,7 @@ def connect(
     catalog_id: Optional[str] = None,
     dbname: Optional[str] = None,
     boto3_session: Optional[boto3.Session] = None,
+    # ssl TODO
     call_timeout: Optional[int] = 0,
 ) -> "cx_Oracle.Connection":
     """Return a cx_Oracle connection from a Glue Catalog Connection.
@@ -123,11 +125,11 @@ def connect(
     You MUST pass a `connection` OR `secret_id`.
     Here is an example of the secret structure in Secrets Manager:
     {
-    "host":"oracle-instance-wrangler.dr8vkeyrb9m1.us-east-1.rds.amazonaws.com",
+    "host":"oracle-instance-wrangler.cr4trrvge8rz.us-east-1.rds.amazonaws.com",
     "username":"test",
     "password":"test",
     "engine":"oracle",
-    "port":"1433",
+    "port":"1521",
     "dbname": "mydb" # Optional
     }
 
@@ -146,10 +148,10 @@ def connect(
     boto3_session : boto3.Session(), optional
         Boto3 Session. The default boto3 session will be used if boto3_session receive None.
     call_timeout: Optional[int]
-        This is the time in seconds before the connection to the server will time out.
+        This is the time in milliseconds that a single round-trip to the database may take before a timeout will occur.
         The default is None which means no timeout.
-        This parameter is forwarded to pyodbc.
-        https://github.com/mkleehammer/pyodbc/wiki/The-pyodbc-Module#connect
+        This parameter is forwarded to cx_Oracle.
+        https://cx-oracle.readthedocs.io/en/latest/api_manual/connection.html#Connection.call_timeout
 
     Returns
     -------
@@ -183,7 +185,6 @@ def connect(
     # cx_Oracle.connect does not have a call_timeout attribute, it has to be set separatly
     connection.call_timeout = call_timeout
     return connection
-
 
 @_check_for_cx_Oracle
 def read_sql_query(
@@ -233,7 +234,7 @@ def read_sql_query(
     >>> import awswrangler as wr
     >>> con = wr.oracle.connect(connection="MY_GLUE_CONNECTION")
     >>> df = wr.oracle.read_sql_query(
-    ...     sql="SELECT * FROM dbo.my_table",
+    ...     sql="SELECT * FROM test.my_table",
     ...     con=con
     ... )
     >>> con.close()
@@ -304,7 +305,7 @@ def read_sql_table(
     >>> con = wr.oracle.connect(connection="MY_GLUE_CONNECTION")
     >>> df = wr.oracle.read_sql_table(
     ...     table="my_table",
-    ...     schema="dbo",
+    ...     schema="test",
     ...     con=con
     ... )
     >>> con.close()
@@ -322,7 +323,6 @@ def read_sql_table(
         timestamp_as_object=timestamp_as_object,
     )
 
-
 @_check_for_cx_Oracle
 @apply_configs
 def to_sql(
@@ -337,7 +337,7 @@ def to_sql(
     use_column_names: bool = False,
     chunksize: int = 200,
 ) -> None:
-    """Write records stored in a DataFrame into Microsoft SQL Server.
+    """Write records stored in a DataFrame into Oracle Database.
 
     Parameters
     ----------
@@ -381,7 +381,7 @@ def to_sql(
     >>> wr.oracle.to_sql(
     ...     df=df,
     ...     table="table",
-    ...     schema="dbo",
+    ...     schema="ORCL",
     ...     con=con
     ... )
     >>> con.close()
@@ -408,20 +408,14 @@ def to_sql(
             table_identifier = _get_table_identifier(schema, table)
             insertion_columns = ""
             if use_column_names:
-                insertion_columns = f"({', '.join(df.columns)})"
+                insertion_columns = "(" + ', '.join('"' + column + '"' for column in df.columns) + ")"
 
-            # unfortunately Oracle does not support the INSERT INTO ... VALUES (row1), (row2), (...)
-            # syntax. The output of generate_placeholder_parameter_pairs() cannot be used directly
-            # but it is still useful for handling types and chunksize
             placeholder_parameter_pair_generator = _db_utils.generate_placeholder_parameter_pairs(
                 df=df, column_placeholders=column_placeholders, chunksize=chunksize
             )
-            for placeholders, parameters in placeholder_parameter_pair_generator:
-                parameters = list(zip(*[iter(parameters)] * len(df.columns)))  # [(1, 'foo'), (2, 'boo')]
-                sql: str = "INSERT ALL "
-                for record in parameters:
-                    sql += f"INTO {table_identifier} {insertion_columns} VALUES {column_placeholders}\n"
-                sql += "SELECT 1 FROM DUAL"
+            for _, parameters in placeholder_parameter_pair_generator:
+                parameters = list(zip(*[iter(parameters)]*len(df.columns)))
+                sql: str = f"INSERT INTO {table_identifier} {insertion_columns} VALUES {column_placeholders}"
                 _logger.debug("sql: %s", sql)
                 cursor.executemany(sql, parameters)
             con.commit()
