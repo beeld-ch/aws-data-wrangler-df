@@ -27,5 +27,5 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: awswrangler-layer-2.15.1-py3.9.zip
-        path: dist/python
+        name: dist 
+        path: dist

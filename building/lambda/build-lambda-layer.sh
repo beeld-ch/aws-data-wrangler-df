@@ -86,10 +86,10 @@ find python -name '*.so' -not -path "./python/scipy/*" -type f -exec strip "{}" 
 find python -wholename "*/tests/*" -type f -delete
 find python -regex '^.*\(__pycache__\|\.py[co]\)$' -delete
 
-# zip -r9 "${FILENAME}" ./python
+zip -r9 "${FILENAME}" ./python
 mkdir -p dist
-# mv "${FILENAME}" dist/
-mv ./python dist/
+mkdir -p dist/artifact
+mv "${FILENAME}" dist/artifact/
 
 # rm -rf python dist/pyarrow_files "${FILENAME}"
 
