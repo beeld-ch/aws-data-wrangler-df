@@ -26,12 +26,10 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.7.1, <3.11"
-
 boto3 = "^1.20.17"
 botocore = "^1.23.17"
 pandas = "^1.2.0"
 numpy = "^1.21.0"
-pyarrow = ">=2.0.0, <7.1.0"
 redshift-connector = "~2.0.889"
 pymysql = "^1.0.0"
 pg8000 = "^1.20.0"
@@ -44,6 +42,8 @@ gremlinpython = "^3.5.2"
 backoff = "^1.11.1"
 SPARQLWrapper = { version = "^1.8.5", optional = true }
 pyodbc = { version = "~4.0.32", optional = true }
+scikit-learn = "^1.0.2"
+XlsxWriter = "^3.0.3"
 
 [tool.poetry.extras]
 sqlserver = ["pyodbc"]

@@ -8,21 +8,21 @@ export DOCKER_BUILDKIT=1
 
 ARCH=$(arch)
 
-if [ "${ARCH}" != "aarch64" ]; then
-  # Python 3.7
-  docker build \
-    --pull \
-    --tag awswrangler-build-py37 \
-    --build-arg base_image=public.ecr.aws/lambda/python:3.7 \
-    .
-fi
+# if [ "${ARCH}" != "aarch64" ]; then
+#   # Python 3.7
+#   docker build \
+#     --pull \
+#     --tag awswrangler-build-py37 \
+#     --build-arg base_image=public.ecr.aws/lambda/python:3.7 \
+#     .
+# fi
 
-# Python 3.8
-docker build \
-  --pull \
-  --tag awswrangler-build-py38 \
-  --build-arg base_image=public.ecr.aws/lambda/python:3.8 \
-  .
+# # Python 3.8
+# docker build \
+#   --pull \
+#   --tag awswrangler-build-py38 \
+#   --build-arg base_image=public.ecr.aws/lambda/python:3.8 \
+#   .
 
 # Python 3.9
 docker build \
