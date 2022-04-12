@@ -87,6 +87,7 @@ find python -wholename "*/tests/*" -type f -delete
 find python -regex '^.*\(__pycache__\|\.py[co]\)$' -delete
 
 zip -r9 "${FILENAME}" ./python
+mkdir -p dist
 mv "${FILENAME}" dist/
 
 # rm -rf python dist/pyarrow_files "${FILENAME}"
