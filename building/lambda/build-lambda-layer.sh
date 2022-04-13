@@ -82,7 +82,7 @@ rm -rf python/boto*
 # cp -r /aws-data-wrangler/dist/pyarrow_files/pyarrow* python/
 
 # Removing nonessential files
-find python . -path "python/sci*" -prune -o -name '*.so' -type f -exec strip "{}" \;
+find python . -path ".python/scipy" -prune -o -name '*.so' -type f -exec strip "{}" \;
 find python -wholename "*/tests/*" -type f -delete
 find python -regex '^.*\(__pycache__\|\.py[co]\)$' -delete
 
