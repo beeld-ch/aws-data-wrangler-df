@@ -85,7 +85,12 @@ find python -path "python/sci*" -prune -o -name '*.so' -type f -exec strip "{}" 
 find python -wholename "*/tests/*" -type f -delete
 find python -regex '^.*\(__pycache__\|\.py[co]\)$' -delete
 
-zip -r9 "${FILENAME}" ./python
+
+# Libgomp stuff
+mkdir -p lib
+cp /usr/lib64/libgomp.so.1 lib/ 
+
+zip -r9 "${FILENAME}" ./python ./lib
 mkdir -p dist
 mkdir -p dist/artifact
 mv "${FILENAME}" dist/artifact/
