@@ -30,27 +30,12 @@ boto3 = "^1.20.17"
 botocore = "^1.23.17"
 pandas = "^1.2.0"
 numpy = "^1.21.0"
-redshift-connector = "~2.0.889"
-pymysql = "^1.0.0"
-pg8000 = "^1.20.0"
 openpyxl = "~3.0.0"
-requests-aws4auth = "^1.1.1"
-jsonpath-ng = "^1.5.3"
-progressbar2 = "^4.0.0"
-opensearch-py = "^1.0.0"
-gremlinpython = "^3.5.2"
-backoff = "^1.11.1"
-SPARQLWrapper = { version = "^1.8.5", optional = true }
-pyodbc = { version = "~4.0.32", optional = true }
 scikit-learn = "^1.0.2"
 XlsxWriter = "^3.0.3"
 scipy = "^1.8.0"
 sklearn-pandas = "^2.2.0"
 lightgbm = "^3.3.2"
-
-[tool.poetry.extras]
-sqlserver = ["pyodbc"]
-sparql = ["SPARQLWrapper"]
 
 [tool.poetry.dev-dependencies]
 wheel = "^0.36.2"

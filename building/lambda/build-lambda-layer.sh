@@ -72,7 +72,6 @@ pushd /aws-data-wrangler
 
 pip3 install . -t ./python
 
-# rm -rf python/pyarrow*
 rm -rf python/boto*
 
 # rm -f /aws-data-wrangler/dist/pyarrow_files/pyarrow/libarrow.so
