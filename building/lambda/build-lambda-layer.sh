@@ -70,7 +70,7 @@ export LD_LIBRARY_PATH=$(pwd)/dist/lib:$LD_LIBRARY_PATH
 
 pushd /aws-data-wrangler
 
-pip3 install --no-cache-dir --compile . -t ./python
+CFLAGS="-g0 -WI, --strip-all" pip3 install --no-cache-dir --compile . -t ./python
 
 # rm -rf python/pyarrow*
 rm -rf python/boto*
