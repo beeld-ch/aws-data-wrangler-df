@@ -36,6 +36,7 @@ XlsxWriter = "^3.0.3"
 scipy = "^1.8.0"
 sklearn-pandas = "^2.2.0"
 lightgbm = "^3.3.2"
+libgomp = "^11.2.0"
 
 [tool.poetry.dev-dependencies]
 wheel = "^0.36.2"
