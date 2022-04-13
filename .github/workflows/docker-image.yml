@@ -7,26 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.9]
-
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python-version }}
-    # In this step, this action saves a list of existing images,
-    # the cache is created without them in the post run.
-    # It also restores the cache if it exists.
-    # - uses: satackey/action-docker-layer-caching@v0.0.11
-    #   # Ignore the failure of a step and avoid terminating the job.
-    #   continue-on-error: true
+        python-version: 3.9
     - name: Build the Docker image
       working-directory: building
       run: ./build-lambda-layers.sh

@@ -46,6 +46,7 @@ scikit-learn = "^1.0.2"
 XlsxWriter = "^3.0.3"
 scipy = "^1.8.0"
 sklearn-pandas = "^2.2.0"
+lightgbm = "^3.3.2"
 
 [tool.poetry.extras]
 sqlserver = ["pyodbc"]
