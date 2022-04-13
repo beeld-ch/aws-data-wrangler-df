@@ -45,6 +45,7 @@ pyodbc = { version = "~4.0.32", optional = true }
 scikit-learn = "^1.0.2"
 XlsxWriter = "^3.0.3"
 scipy = "^1.8.0"
+sklearn-pandas = "^2.2.0"
 
 [tool.poetry.extras]
 sqlserver = ["pyodbc"]
